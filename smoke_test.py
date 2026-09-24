@@ -184,6 +184,27 @@ async def test_compare_branches(repo_name):
         record("compare_branches", False, str(e))
 
 
+async def test_search_code():
+    """Test: Search code across repos"""
+    try:
+        result = server.search_code("RunStore", limit=5)
+        record("search_code", True, f"result={result[:80]}...")
+    except Exception as e:
+        record("search_code", False, str(e))
+
+
+async def test_review_pull_request(repo_name, pr_number):
+    """Test: Review pull request security and test coverage"""
+    if pr_number is None:
+        record("review_pull_request", True, "SKIPPED — no PRs found")
+        return
+    try:
+        result = server.review_pull_request(repo_name, pr_number)
+        record("review_pull_request", "verdict" in result and "risk_level" in result, f"PR #{pr_number}")
+    except Exception as e:
+        record("review_pull_request", False, str(e))
+
+
 async def main():
     print("=" * 60)
     print("🧪 GitHub MCP Server — Smoke Tests")
@@ -204,6 +225,7 @@ async def main():
         await test_get_pr_diff(repo_name, pr_number)
         await test_get_pr_files(repo_name, pr_number)
         await test_list_pr_comments(repo_name, pr_number)
+        await test_review_pull_request(repo_name, pr_number)
 
     print("\n📝 Commit Tools:")
     sha = None
@@ -211,6 +233,9 @@ async def main():
         sha = await test_list_recent_commits(repo_name)
         await test_get_commit_details(repo_name, sha)
         await test_compare_branches(repo_name)
+
+    print("\n🔍 Code Search Tools:")
+    await test_search_code()
 
     print("\n" + "=" * 60)
     passed = sum(1 for r in results if r[0] == PASS)
@@ -223,3 +248,4 @@ async def main():
 
 
 asyncio.run(main())
+

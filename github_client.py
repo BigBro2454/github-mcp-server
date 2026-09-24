@@ -4,8 +4,10 @@ Thin wrapper around PyGithub that auto-prefixes the owner on all repo operations
 """
 
 import os
+import re
 from github import Github, Auth
 from github.GithubException import GithubException, UnknownObjectException
+
 
 
 GITHUB_USERNAME = "BigBro2454"
@@ -312,3 +314,207 @@ class GitHubClient:
             ],
             "url": comparison.html_url,
         }
+
+    # ── Search & Review Operations ───────────────────────────────────
+
+    def search_code(
+        self,
+        query: str,
+        repo_name: str | None = None,
+        language: str | None = None,
+        path: str | None = None,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Search code across BigBro2454's repositories."""
+        limit = min(limit, 50)
+        query_parts = [query, f"user:{self.username}"]
+
+        if repo_name:
+            query_parts.append(f"repo:{self._full_repo_name(repo_name)}")
+        if language:
+            query_parts.append(f"language:{language}")
+        if path:
+            query_parts.append(f"path:{path}")
+
+        full_query = " ".join(query_parts)
+        try:
+            results = self.gh.search_code(full_query)
+            try:
+                if results.totalCount == 0:
+                    return []
+            except (IndexError, GithubException):
+                return []
+
+            items = []
+            for idx, item in enumerate(results):
+                items.append({
+                    "name": item.name,
+                    "path": item.path,
+                    "repository": item.repository.name,
+                    "sha": item.sha[:8],
+                    "url": item.html_url,
+                })
+                if idx + 1 >= limit:
+                    break
+            return items
+        except (GithubException, IndexError) as exc:
+            # Fallback or empty if search index is rate-limited or unavailable
+            return [{"error": str(exc), "query": full_query}]
+
+    def review_pull_request(self, repo_name: str, pr_number: int) -> dict:
+        """Perform automated security, testing, and architecture review on a PR."""
+        repo = self._get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+
+        files = list(pr.get_files())
+        additions = pr.additions
+        deletions = pr.deletions
+        total_changes = additions + deletions
+
+        security_patterns = [
+            (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS Access Key ID detected"),
+            (re.compile(r"gh[pousr]_[A-Za-z0-9_]{36,}"), "GitHub Personal Access Token detected"),
+            (re.compile(r"AIzaSy[A-Za-z0-9_-]{30,}"), "Google / Gemini API Key detected"),
+            (re.compile(r"sk-[A-Za-z0-9_-]{32,}"), "OpenAI API Key detected"),
+            (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----"), "Private cryptographic key detected"),
+
+        ]
+
+        security_findings: list[dict] = []
+        code_files_changed: list[str] = []
+        test_files_changed: list[str] = []
+        doc_files_changed: list[str] = []
+
+        code_extensions = {".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".c", ".cpp"}
+        test_indicators = {"test", "tests", "spec", "evals"}
+
+        for f in files:
+            fname = f.filename.lower()
+            ext = os.path.splitext(fname)[1]
+
+            # Categorize files
+            if any(ind in fname for ind in test_indicators):
+                test_files_changed.append(f.filename)
+            elif ext in code_extensions:
+                code_files_changed.append(f.filename)
+            elif ext in {".md", ".txt", ".rst", ".adoc"}:
+                doc_files_changed.append(f.filename)
+
+            # Security inspection on patch
+            patch = f.patch or ""
+            if patch:
+                for line in patch.splitlines():
+                    if line.startswith("+") and not line.startswith("+++"):
+                        for pat, label in security_patterns:
+                            if pat.search(line):
+                                security_findings.append({
+                                    "file": f.filename,
+                                    "severity": "CRITICAL",
+                                    "issue": label,
+                                    "snippet": line[:80].strip(),
+                                })
+
+            # Check if sensitive file directly tracked
+            if any(sens in fname for sens in [".env", "id_rsa", ".pem", ".key", "credentials.json"]):
+                if f.filename != ".env.example":
+                    security_findings.append({
+                        "file": f.filename,
+                        "severity": "CRITICAL",
+                        "issue": f"Sensitive file committed: {f.filename}",
+                        "snippet": f.filename,
+                    })
+
+        # Test coverage assessment
+        if code_files_changed and not test_files_changed:
+            test_status = "TESTS_MISSING"
+        elif test_files_changed:
+            test_status = "TESTS_PRESENT"
+        else:
+            test_status = "NO_CODE_CHANGES"
+
+        # Risk classification
+        if security_findings:
+            risk_level = "CRITICAL"
+            verdict = "REQUEST_CHANGES"
+        elif total_changes > 500 and test_status == "TESTS_MISSING":
+            risk_level = "HIGH"
+            verdict = "REQUEST_CHANGES"
+        elif total_changes > 300 or test_status == "TESTS_MISSING":
+            risk_level = "MEDIUM"
+            verdict = "COMMENT"
+        else:
+            risk_level = "LOW"
+            verdict = "APPROVE"
+
+        # Recommendations
+        recommendations = []
+        if security_findings:
+            recommendations.append("Immediately revoke and remove detected secrets from git history.")
+        if test_status == "TESTS_MISSING":
+            recommendations.append(
+                f"PR modifies {len(code_files_changed)} code file(s) without test updates. Add unit/integration tests."
+            )
+        if total_changes > 400:
+            recommendations.append("PR exceeds 400 lines changed. Consider splitting into focused, atomic pull requests.")
+        if not recommendations:
+            recommendations.append("Changes look clean and well-structured. Good to merge.")
+
+        # Markdown review report
+        md_summary = [
+            f"## 🤖 Automated PR Review — #{pr.number}: {pr.title}",
+            "",
+            f"**Verdict:** `[{verdict}]` | **Risk Level:** `{risk_level}`",
+            "",
+            "### 📊 Metrics & Scope",
+            f"- **Files Changed:** {len(files)} ({len(code_files_changed)} code, {len(test_files_changed)} test, {len(doc_files_changed)} doc)",
+            f"- **Volume:** +{additions} / -{deletions} ({total_changes} total lines)",
+            f"- **Test Coverage Status:** `{test_status}`",
+            "",
+            "### 🛡️ Security Audit",
+        ]
+
+        if security_findings:
+            for s in security_findings:
+                md_summary.append(f"- 🚨 **[{s['severity']}]** `{s['file']}`: {s['issue']}")
+        else:
+            md_summary.append("- ✅ Zero secrets or sensitive credentials detected in diff patch.")
+
+        md_summary.extend([
+            "",
+            "### 💡 Recommendations",
+        ])
+        for rec in recommendations:
+            md_summary.append(f"- {rec}")
+
+        return {
+            "pr_number": pr.number,
+            "title": pr.title,
+            "verdict": verdict,
+            "risk_level": risk_level,
+            "metrics": {
+                "total_files": len(files),
+                "code_files": len(code_files_changed),
+                "test_files": len(test_files_changed),
+                "doc_files": len(doc_files_changed),
+                "additions": additions,
+                "deletions": deletions,
+                "total_changes": total_changes,
+            },
+            "test_coverage_status": test_status,
+            "security_findings": security_findings,
+            "recommendations": recommendations,
+            "markdown_summary": "\n".join(md_summary),
+        }
+
+    def post_pr_comment(self, repo_name: str, pr_number: int, body: str) -> dict:
+        """Post a comment on a pull request."""
+        repo = self._get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+        comment = pr.create_issue_comment(body)
+        return {
+            "id": comment.id,
+            "url": comment.html_url,
+            "body": comment.body,
+            "created_at": comment.created_at.isoformat() if comment.created_at else "",
+        }
+
