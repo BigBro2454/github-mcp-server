@@ -228,7 +228,70 @@ def compare_branches(repo_name: str, base: str, head: str) -> str:
     return _format(_get_client().compare_branches(repo_name, base, head))
 
 
+# ── Search & Review Tools ─────────────────────────────────────────────────────
+
+
+@mcp.tool()
+def search_code(
+    query: str,
+    repo_name: str | None = None,
+    language: str | None = None,
+    path: str | None = None,
+    limit: int = 10,
+) -> str:
+    """Search code across BigBro2454's GitHub repositories.
+
+    Args:
+        query: Search keywords, symbol name, function, class, or imports.
+        repo_name: Optional repository name filter (e.g. "crewai-studio").
+        language: Optional language filter (e.g. "Python", "TypeScript").
+        path: Optional directory path filter (e.g. "backend/utils").
+        limit: Max results to return (default 10, max 50).
+    """
+    results = _get_client().search_code(
+        query=query,
+        repo_name=repo_name,
+        language=language,
+        path=path,
+        limit=limit,
+    )
+    if not results:
+        return f"No code matches found for '{query}'."
+    return _format(results)
+
+
+@mcp.tool()
+def review_pull_request(
+    repo_name: str,
+    pr_number: int,
+) -> str:
+    """Perform automated code review, security credential scan, and test coverage audit on a PR.
+
+    Args:
+        repo_name: Repository name (e.g. "crewai-studio").
+        pr_number: The pull request number to review.
+    """
+    return _format(_get_client().review_pull_request(repo_name, pr_number))
+
+
+@mcp.tool()
+def post_pr_comment(
+    repo_name: str,
+    pr_number: int,
+    body: str,
+) -> str:
+    """Post a comment or review analysis directly on a pull request.
+
+    Args:
+        repo_name: Repository name (e.g. "crewai-studio").
+        pr_number: The pull request number.
+        body: Markdown content of the comment.
+    """
+    return _format(_get_client().post_pr_comment(repo_name, pr_number, body))
+
+
 # ── Entry Point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     mcp.run()
+

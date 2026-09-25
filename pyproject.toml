@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "github-mcp-server"
+version = "0.2.0"
+description = "Model Context Protocol (MCP) server for GitHub scoped to BigBro2454"
+readme = "README.md"
+authors = [{ name = "Ishan Dhiman" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastmcp>=2.0.0",
+    "PyGithub>=2.1.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

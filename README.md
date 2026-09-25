@@ -1,11 +1,13 @@
 # GitHub MCP Server (`BigBro2454`)
 
 [![MCP Specification](https://img.shields.io/badge/MCP-JSON--RPC%202.0-blue.svg)](https://modelcontextprotocol.io/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-3.4.7-emerald.svg)](https://github.com/jlowin/fastmcp)
+[![FastMCP](https://img.shields.io/badge/FastMCP-2.0%2B-emerald.svg)](https://github.com/jlowin/fastmcp)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/Tests-12%2F12%20Passed-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/Tools-15%20Registered-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-14%2F14%20Smoke%20%7C%204%2F4%20Unit%20Passed-brightgreen.svg)]()
 
-Production-grade, personal Model Context Protocol (MCP) server engineered with **FastMCP** and **PyGithub**. This server exposes high-fidelity GitHub operations (repository intelligence, pull request lifecycle, unified diff inspection, and git commit history) scoped specifically to the `BigBro2454` namespace over standard input/output (stdio) transport.
+Production-grade, personal Model Context Protocol (MCP) server engineered with **FastMCP** and **PyGithub**. This server exposes 15 high-fidelity GitHub operations (repository intelligence, pull request lifecycle, automated PR code review & security auditing, semantic code search, and git commit history) scoped specifically to the `BigBro2454` namespace over standard input/output (stdio) transport.
+
 
 ---
 
@@ -303,9 +305,66 @@ Aggregates and chronologically sorts both top-level issue discussion comments an
   }
   ```
 
+#### `review_pull_request`
+Performs automated multi-vector code review across the PR's unified diff patch:
+1. **Security Vulnerability Scan**: Scans diffs for leaked cloud API keys (AWS, GitHub, Google Gemini, OpenAI) and unencrypted private keys.
+2. **Blast Radius & Complexity Analysis**: Calculates total lines changed, additions/deletions ratio, and flags monolithic changes (>400 lines).
+3. **Test Coverage Audit**: Verifies whether core code additions (`.py`, `.ts`, etc.) are accompanied by corresponding test updates (`test_*.py`, `*.spec.ts`).
+4. **Structured Review Verdict**: Generates an authoritative assessment (`APPROVE`, `COMMENT`, `REQUEST_CHANGES`) with risk categorization (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) and formatted Markdown report.
+- **Parameters**:
+  ```json
+  {
+    "type": "object",
+    "properties": {
+      "repo_name": { "type": "string", "description": "Repository name." },
+      "pr_number": { "type": "integer", "description": "The pull request number." }
+    },
+    "required": ["repo_name", "pr_number"],
+    "additionalProperties": false
+  }
+  ```
+
+#### `post_pr_comment`
+Publishes an automated review summary, markdown scorecard, or inline feedback directly onto the target pull request.
+- **Parameters**:
+  ```json
+  {
+    "type": "object",
+    "properties": {
+      "repo_name": { "type": "string", "description": "Repository name." },
+      "pr_number": { "type": "integer", "description": "The pull request number." },
+      "body": { "type": "string", "description": "Markdown comment body to post." }
+    },
+    "required": ["repo_name", "pr_number", "body"],
+    "additionalProperties": false
+  }
+  ```
+
 ---
 
-### 3. Commit & Version History Intelligence
+### 3. Semantic & Code Search Intelligence
+
+#### `search_code`
+Performs scoped code search across all `BigBro2454` repositories using keyword, symbol, function, or class queries with optional repository, language, and path filters.
+- **Parameters**:
+  ```json
+  {
+    "type": "object",
+    "properties": {
+      "query": { "type": "string", "description": "Search keyword, function, class, or import." },
+      "repo_name": { "type": ["string", "null"], "description": "Optional repository filter." },
+      "language": { "type": ["string", "null"], "description": "Optional language filter." },
+      "path": { "type": ["string", "null"], "description": "Optional file path filter." },
+      "limit": { "type": "integer", "default": 10, "description": "Max results to return (1-50)." }
+    },
+    "required": ["query"],
+    "additionalProperties": false
+  }
+  ```
+
+---
+
+### 4. Commit & Version History Intelligence
 
 #### `list_recent_commits`
 Extracts the chronological commit history of a branch up to a configurable ceiling (max 50).
@@ -447,15 +506,22 @@ Add the `github-personal` server entry under `mcpServers`:
 
 ---
 
-## Verification & Smoke Testing
+## Verification & Testing
 
-The repository contains an automated validation suite (`smoke_test.py`) that performs end-to-end assertions against the live GitHub API using configured credentials.
+The repository includes both an offline unit test suite with mocks (`pytest`) and an automated live integration suite (`smoke_test.py`) that performs end-to-end assertions against the live GitHub API:
 
+### 1. Offline Unit Tests
+```bash
+./.venv/bin/pytest tests/
+```
+*Output: 4 passed in 0.39s (mock PR reviews, security scanners, and FastMCP tool registration)*
+
+### 2. Live Smoke Testing
 ```bash
 ./.venv/bin/python smoke_test.py
 ```
 
-### Verification Output Matrix
+### Smoke Test Output Matrix
 
 ```text
 ============================================================
@@ -466,23 +532,27 @@ The repository contains an automated validation suite (`smoke_test.py`) that per
 📂 Repo Tools:
   ✅ list_my_repos — [{"name": "crewai-studio", ...}]
   ✅ get_repo_info — repo=crewai-studio
-  ✅ list_branches — repo=crewai-studio, result=[{"name": "main", ...}]
+  ✅ list_branches — repo=crewai-studio
   ✅ get_file_contents — repo=crewai-studio
 
 🔀 PR & Review Tools:
   ✅ list_pull_requests — repo=crewai-studio
-  ✅ get_pull_request — SKIPPED — (asserted if PRs exist)
-  ✅ get_pr_diff — SKIPPED — (asserted if PRs exist)
-  ✅ get_pr_files — SKIPPED — (asserted if PRs exist)
-  ✅ list_pr_comments — SKIPPED — (asserted if PRs exist)
+  ✅ get_pull_request — PR #1
+  ✅ get_pr_diff — PR #1
+  ✅ get_pr_files — PR #1
+  ✅ list_pr_comments — PR #1
+  ✅ review_pull_request — PR #1
 
 📝 Commit Tools:
   ✅ list_recent_commits — repo=crewai-studio
-  ✅ get_commit_details — sha=f4fee5dd
-  ✅ compare_branches — SKIPPED — (asserted when >1 branch exists)
+  ✅ get_commit_details — sha=548cbe98
+  ✅ compare_branches — feature/sqlite-telemetry-exporter..main
+
+🔍 Code Search Tools:
+  ✅ search_code — result=No code matches found for 'RunStore'...
 
 ============================================================
-Results: 12 passed, 0 failed, 12 total
+Results: 14 passed, 0 failed, 14 total
 ============================================================
 ```
 
