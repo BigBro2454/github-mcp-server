@@ -1,0 +1,159 @@
+{
+  "uptime_seconds": 0.0,
+  "total_invocations": 230,
+  "total_errors": 0,
+  "overall_success_rate_pct": 100.0,
+  "overall_mean_latency_ms": 46.38,
+  "overall_p95_latency_ms": 98.45,
+  "github_api_quota": {
+    "core_limit": 5000,
+    "core_remaining": 4968,
+    "core_reset_timestamp": 1791400000,
+    "search_limit": 30,
+    "search_remaining": 29,
+    "search_reset_timestamp": 0,
+    "last_updated": 1791439931.080317
+  },
+  "tools": {
+    "list_my_repos": {
+      "total_calls": 12,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 48.59,
+      "min_latency_ms": 36.16,
+      "max_latency_ms": 61.02,
+      "p95_latency_ms": 61.02,
+      "total_bytes_transferred": 12040
+    },
+    "get_repo_info": {
+      "total_calls": 28,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 47.35,
+      "min_latency_ms": 25.68,
+      "max_latency_ms": 69.02,
+      "p95_latency_ms": 67.41,
+      "total_bytes_transferred": 18500
+    },
+    "list_branches": {
+      "total_calls": 15,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 28.18,
+      "min_latency_ms": 19.6,
+      "max_latency_ms": 36.75,
+      "p95_latency_ms": 36.75,
+      "total_bytes_transferred": 6200
+    },
+    "get_file_contents": {
+      "total_calls": 34,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 29.9,
+      "min_latency_ms": 14.72,
+      "max_latency_ms": 45.08,
+      "p95_latency_ms": 44.16,
+      "total_bytes_transferred": 45800
+    },
+    "list_pull_requests": {
+      "total_calls": 22,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 51.15,
+      "min_latency_ms": 30.88,
+      "max_latency_ms": 71.41,
+      "p95_latency_ms": 69.48,
+      "total_bytes_transferred": 14200
+    },
+    "get_pull_request": {
+      "total_calls": 19,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 36.63,
+      "min_latency_ms": 23.44,
+      "max_latency_ms": 49.81,
+      "p95_latency_ms": 49.81,
+      "total_bytes_transferred": 11800
+    },
+    "get_pr_diff": {
+      "total_calls": 16,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 62.04,
+      "min_latency_ms": 42.24,
+      "max_latency_ms": 81.84,
+      "p95_latency_ms": 81.84,
+      "total_bytes_transferred": 64200
+    },
+    "get_pr_files": {
+      "total_calls": 14,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 34.88,
+      "min_latency_ms": 24.8,
+      "max_latency_ms": 44.95,
+      "p95_latency_ms": 44.95,
+      "total_bytes_transferred": 9400
+    },
+    "list_recent_commits": {
+      "total_calls": 20,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 36.59,
+      "min_latency_ms": 22.96,
+      "max_latency_ms": 50.23,
+      "p95_latency_ms": 50.23,
+      "total_bytes_transferred": 15100
+    },
+    "search_code": {
+      "total_calls": 11,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 82.32,
+      "min_latency_ms": 62.72,
+      "max_latency_ms": 101.92,
+      "p95_latency_ms": 101.92,
+      "total_bytes_transferred": 21400
+    },
+    "review_pull_request": {
+      "total_calls": 9,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 114.2,
+      "min_latency_ms": 91.36,
+      "max_latency_ms": 137.04,
+      "p95_latency_ms": 137.04,
+      "total_bytes_transferred": 38600
+    },
+    "audit_repo_security_health": {
+      "total_calls": 8,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 87.26,
+      "min_latency_ms": 71.6,
+      "max_latency_ms": 102.93,
+      "p95_latency_ms": 102.93,
+      "total_bytes_transferred": 18900
+    },
+    "generate_release_notes": {
+      "total_calls": 7,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 90.53,
+      "min_latency_ms": 76.24,
+      "max_latency_ms": 104.83,
+      "p95_latency_ms": 104.83,
+      "total_bytes_transferred": 24100
+    },
+    "get_api_quota_telemetry": {
+      "total_calls": 15,
+      "error_count": 0,
+      "success_rate_pct": 100.0,
+      "mean_latency_ms": 1.38,
+      "min_latency_ms": 0.96,
+      "max_latency_ms": 1.8,
+      "p95_latency_ms": 1.8,
+      "total_bytes_transferred": 4500
+    }
+  }
+}

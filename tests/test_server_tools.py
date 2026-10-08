@@ -8,7 +8,7 @@ from github_client import GitHubClient
 
 
 def test_mcp_tool_registration():
-    """Verify all 15 MCP tools are registered with FastMCP."""
+    """Verify all 18 MCP tools are registered with FastMCP."""
     tool_names = [t.name for t in asyncio.run(server.mcp.list_tools())]
     expected_tools = [
         "list_my_repos",
@@ -26,10 +26,13 @@ def test_mcp_tool_registration():
         "search_code",
         "review_pull_request",
         "post_pr_comment",
+        "audit_repo_security_health",
+        "generate_release_notes",
+        "get_api_quota_telemetry",
     ]
     for exp in expected_tools:
         assert exp in tool_names, f"Tool '{exp}' not found in registered tools"
-    assert len(tool_names) == 15
+    assert len(tool_names) == 18
 
 
 
@@ -121,3 +124,60 @@ def test_search_code_formatting():
         assert len(parsed) == 1
         assert parsed[0]["name"] == "server.py"
         assert parsed[0]["repository"] == "github-mcp-server"
+
+
+def test_server_rate_limiting_gate():
+    """Verify tool execution returns RATE_LIMIT_EXCEEDED when token bucket is exhausted."""
+    from guardrails import guardrails
+
+    client = MagicMock()
+    client.list_branches.return_value = [{"name": "main", "sha": "12345678", "protected": True}]
+
+    # Drain tokens
+    guardrails.rate_limiter.tokens = 0.0
+
+    with patch.object(server, "_get_client", return_value=client):
+        res = server.list_branches("test-repo")
+        parsed = json.loads(res)
+        assert parsed.get("error") == "RATE_LIMIT_EXCEEDED"
+        assert "quota exhausted" in parsed.get("message", "").lower()
+
+    # Reset tokens for subsequent tests
+    guardrails.rate_limiter.reset()
+
+
+def test_get_file_contents_security_violation_via_server():
+    """Verify server.get_file_contents intercepts blocked files before hitting GitHub."""
+    client = MagicMock()
+    with patch.object(server, "_get_client", return_value=client):
+        res = server.get_file_contents("test-repo", ".env")
+        parsed = json.loads(res)
+        assert parsed.get("error") == "SECURITY_POLICY_VIOLATION"
+        assert "strictly blocked" in parsed.get("message", "")
+        # Client method should not even be invoked
+        client.get_file_contents.assert_not_called()
+
+
+def test_post_pr_comment_leak_protection_via_server():
+    """Verify server.post_pr_comment redacts credentials and records telemetry."""
+    client = GitHubClient.__new__(GitHubClient)
+    client.username = "BigBro2454"
+
+    mock_repo = MagicMock()
+    mock_pr = MagicMock()
+    mock_comment = MagicMock()
+    mock_comment.id = 101
+    mock_comment.html_url = "https://github.com/BigBro2454/test-repo/pull/1#comment-101"
+    mock_comment.body = "Token: [REDACTED_GITHUB_PERSONAL_ACCESS_TOKEN]"
+    mock_comment.created_at = None
+
+    mock_pr.create_issue_comment.return_value = mock_comment
+    mock_repo.get_pull.return_value = mock_pr
+    client._get_repo = MagicMock(return_value=mock_repo)
+
+    with patch.object(server, "_get_client", return_value=client):
+        res = server.post_pr_comment("test-repo", 1, "Token: ghp_1234567890abcdefghijklmnopqrstuvwxyz")
+        parsed = json.loads(res)
+        assert parsed["sanitized"] is True
+        assert len(parsed["redacted_findings"]) >= 1
+
