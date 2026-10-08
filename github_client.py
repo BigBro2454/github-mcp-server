@@ -8,6 +8,9 @@ import re
 from github import Github, Auth
 from github.GithubException import GithubException, UnknownObjectException
 
+from guardrails import guardrails
+from telemetry import telemetry
+
 
 
 GITHUB_USERNAME = "BigBro2454"
@@ -106,6 +109,14 @@ class GitHubClient:
         self, repo_name: str, file_path: str, ref: str | None = None
     ) -> dict:
         """Read a file from a repo at a given ref."""
+        is_safe, violation = guardrails.validate_file_path(file_path)
+        if not is_safe:
+            return {
+                "error": "SECURITY_POLICY_VIOLATION",
+                "message": violation,
+                "path": file_path,
+            }
+
         repo = self._get_repo(repo_name)
         kwargs = {}
         if ref:
@@ -507,14 +518,320 @@ class GitHubClient:
         }
 
     def post_pr_comment(self, repo_name: str, pr_number: int, body: str) -> dict:
-        """Post a comment on a pull request."""
+        """Post a comment on a pull request after outbound security sanitization."""
         repo = self._get_repo(repo_name)
         pr = repo.get_pull(pr_number)
-        comment = pr.create_issue_comment(body)
+
+        # Sanitize outbound body to prevent credential leaks
+        sanitization = guardrails.sanitize_outbound_text(body)
+        sanitized_body = sanitization["sanitized_text"]
+
+        comment = pr.create_issue_comment(sanitized_body)
         return {
             "id": comment.id,
             "url": comment.html_url,
             "body": comment.body,
+            "sanitized": not sanitization["is_safe"],
+            "redacted_findings": sanitization["findings"],
             "created_at": comment.created_at.isoformat() if comment.created_at else "",
         }
+
+    # ── Governance & Productivity Operations ─────────────────────────
+
+    def audit_repo_security_health(self, repo_name: str) -> dict:
+        """
+        Audit repository security posture, governance files, branch protections,
+        and configuration hygiene against Google L5 engineering standards.
+        """
+        repo = self._get_repo(repo_name)
+        checks: dict[str, dict] = {}
+        score = 0
+        max_score = 100
+        findings = []
+        recommendations = []
+
+        # 1. Branch Protection (15 pts)
+        has_protection = False
+        try:
+            default_branch = repo.get_branch(repo.default_branch)
+            has_protection = bool(default_branch.protected)
+        except Exception:
+            has_protection = False
+
+        checks["default_branch_protection"] = {
+            "passed": has_protection,
+            "points": 15 if has_protection else 0,
+            "max_points": 15,
+            "details": f"Default branch '{repo.default_branch}' protected: {has_protection}",
+        }
+        score += checks["default_branch_protection"]["points"]
+        if not has_protection:
+            recommendations.append(f"Enable branch protection rules on default branch '{repo.default_branch}'.")
+
+        # 2. .gitignore Hygiene (20 pts)
+        has_gitignore = False
+        gitignore_covers_secrets = False
+        try:
+            gi_content = repo.get_contents(".gitignore")
+            has_gitignore = True
+            gi_text = gi_content.decoded_content.decode("utf-8", errors="replace")
+            required_patterns = [".env", ".venv", "__pycache__"]
+            gitignore_covers_secrets = all(p in gi_text for p in required_patterns)
+        except Exception:
+            has_gitignore = False
+
+        gi_points = 20 if (has_gitignore and gitignore_covers_secrets) else (10 if has_gitignore else 0)
+        checks["gitignore_hygiene"] = {
+            "passed": has_gitignore and gitignore_covers_secrets,
+            "points": gi_points,
+            "max_points": 20,
+            "details": f"Present: {has_gitignore}, covers env/venv/cache: {gitignore_covers_secrets}",
+        }
+        score += gi_points
+        if not has_gitignore:
+            recommendations.append("Add a comprehensive .gitignore file to prevent credential leaks.")
+        elif not gitignore_covers_secrets:
+            recommendations.append("Update .gitignore to explicitly ignore .env, .venv, and bytecode caches.")
+
+        # 3. Secret-Free Root Directory Scan (25 pts)
+        root_secrets_found = []
+        try:
+            root_contents = repo.get_contents("")
+            if isinstance(root_contents, list):
+                for item in root_contents:
+                    is_safe, _ = guardrails.validate_file_path(item.name)
+                    if not is_safe:
+                        root_secrets_found.append(item.name)
+        except Exception:
+            pass
+
+        secret_free = len(root_secrets_found) == 0
+        sec_points = 25 if secret_free else 0
+        checks["secret_free_workspace"] = {
+            "passed": secret_free,
+            "points": sec_points,
+            "max_points": 25,
+            "details": f"Sensitive files detected: {root_secrets_found if root_secrets_found else 'None'}",
+        }
+        score += sec_points
+        if root_secrets_found:
+            findings.append(f"Sensitive files committed in repository: {', '.join(root_secrets_found)}")
+            recommendations.append(f"Immediately remove sensitive files from git history: {', '.join(root_secrets_found)}")
+
+        # 4. Open Source License (15 pts)
+        has_license = False
+        try:
+            repo.get_license()
+            has_license = True
+        except Exception:
+            try:
+                repo.get_contents("LICENSE")
+                has_license = True
+            except Exception:
+                has_license = False
+
+        checks["license"] = {
+            "passed": has_license,
+            "points": 15 if has_license else 0,
+            "max_points": 15,
+            "details": "LICENSE file detected" if has_license else "No LICENSE found",
+        }
+        score += checks["license"]["points"]
+        if not has_license:
+            recommendations.append("Add an open-source license (e.g. MIT, Apache-2.0) declaring usage rights.")
+
+        # 5. Documentation & PRD Readme (15 pts)
+        readme_quality = False
+        readme_len = 0
+        try:
+            readme_content = repo.get_readme()
+            readme_len = len(readme_content.decoded_content)
+            readme_quality = readme_len >= 500
+        except Exception:
+            readme_quality = False
+
+        checks["readme_documentation"] = {
+            "passed": readme_quality,
+            "points": 15 if readme_quality else (5 if readme_len > 0 else 0),
+            "max_points": 15,
+            "details": f"README present ({readme_len} bytes, L5 standard: >=500B)",
+        }
+        score += checks["readme_documentation"]["points"]
+        if not readme_quality:
+            recommendations.append("Expand README to Google L5 PRD/Design Doc standard with architecture diagrams.")
+
+        # 6. Security Policy (SECURITY.md) (10 pts)
+        has_security_policy = False
+        for sec_path in ["SECURITY.md", ".github/SECURITY.md"]:
+            try:
+                repo.get_contents(sec_path)
+                has_security_policy = True
+                break
+            except Exception:
+                pass
+
+        checks["security_policy"] = {
+            "passed": has_security_policy,
+            "points": 10 if has_security_policy else 0,
+            "max_points": 10,
+            "details": "SECURITY.md present" if has_security_policy else "No SECURITY.md file found",
+        }
+        score += checks["security_policy"]["points"]
+        if not has_security_policy:
+            recommendations.append("Add a SECURITY.md file specifying vulnerability disclosure procedures.")
+
+        # Grade calculation
+        if score >= 90:
+            grade = "A+"
+        elif score >= 80:
+            grade = "A"
+        elif score >= 70:
+            grade = "B"
+        elif score >= 50:
+            grade = "C"
+        else:
+            grade = "F"
+
+        # Markdown Scorecard
+        md_lines = [
+            f"## 🛡️ Repository Security & Governance Audit: `{repo.full_name}`",
+            "",
+            f"**Overall Health Score:** `{score}/{max_score}` | **Grade:** `{grade}`",
+            "",
+            "### 📋 Governance Dimension Scorecard",
+            "| Dimension | Points | Max | Status | Notes |",
+            "| :--- | :---: | :---: | :---: | :--- |",
+        ]
+        for name, chk in checks.items():
+            status_icon = "✅" if chk["passed"] else "⚠️"
+            md_lines.append(f"| `{name}` | {chk['points']} | {chk['max_points']} | {status_icon} | {chk['details']} |")
+
+        if findings:
+            md_lines.extend(["", "### 🚨 Security Vulnerabilities"])
+            for f in findings:
+                md_lines.append(f"- {f}")
+
+        if recommendations:
+            md_lines.extend(["", "### 💡 Remediation Recommendations"])
+            for rec in recommendations:
+                md_lines.append(f"- {rec}")
+
+        return {
+            "repo_name": repo.name,
+            "full_name": repo.full_name,
+            "health_score": score,
+            "max_score": max_score,
+            "grade": grade,
+            "checks": checks,
+            "findings": findings,
+            "recommendations": recommendations,
+            "markdown_scorecard": "\n".join(md_lines),
+        }
+
+    def generate_release_notes(
+        self, repo_name: str, base_ref: str, head_ref: str = "main"
+    ) -> dict:
+        """
+        Synthesize automated, presentation-ready release notes & changelog
+        by analyzing git history and PR commits between base_ref and head_ref.
+        """
+        comparison = self.compare_branches(repo_name, base_ref, head_ref)
+        commits = comparison.get("commits", [])
+
+        categories = {
+            "features": {"label": "🚀 Features", "items": []},
+            "fixes": {"label": "🐛 Bug Fixes", "items": []},
+            "security": {"label": "🛡️ Security & Guardrails", "items": []},
+            "performance": {"label": "⚡ Performance & SLAs", "items": []},
+            "docs": {"label": "📝 Documentation & Architecture", "items": []},
+            "tooling": {"label": "🔧 Refactor & Infrastructure", "items": []},
+            "other": {"label": "📦 Other Changes", "items": []},
+        }
+
+        breaking_changes = []
+        authors = set()
+
+        for c in commits:
+            msg = c.get("message", "").strip()
+            first_line = msg.split("\n")[0].strip()
+            author = c.get("author", "unknown")
+            if author:
+                authors.add(author)
+
+            # Check breaking change
+            if "BREAKING CHANGE" in msg or "!:" in first_line:
+                breaking_changes.append(f"{c['sha']}: {first_line}")
+
+            lower_line = first_line.lower()
+            if lower_line.startswith("feat"):
+                categories["features"]["items"].append((c["sha"], first_line))
+            elif lower_line.startswith("fix"):
+                categories["fixes"]["items"].append((c["sha"], first_line))
+            elif any(lower_line.startswith(p) for p in ["sec", "security"]):
+                categories["security"]["items"].append((c["sha"], first_line))
+            elif lower_line.startswith("perf"):
+                categories["performance"]["items"].append((c["sha"], first_line))
+            elif lower_line.startswith("docs"):
+                categories["docs"]["items"].append((c["sha"], first_line))
+            elif any(lower_line.startswith(p) for p in ["refactor", "chore", "ci", "build", "test"]):
+                categories["tooling"]["items"].append((c["sha"], first_line))
+            else:
+                categories["other"]["items"].append((c["sha"], first_line))
+
+        md_lines = [
+            f"# 🚀 Release Notes: `{repo_name}` ({base_ref} → {head_ref})",
+            "",
+            f"**Commits:** `{len(commits)}` | **Files Changed:** `{comparison.get('files_changed', 0)}` | **Contributors:** `{', '.join(sorted(authors))}`",
+            "",
+        ]
+
+        if breaking_changes:
+            md_lines.extend([
+                "## ⚠️ BREAKING CHANGES",
+                "",
+            ])
+            for b in breaking_changes:
+                md_lines.append(f"- 💥 {b}")
+            md_lines.append("")
+
+        for cat_key, cat in categories.items():
+            if cat["items"]:
+                md_lines.append(f"## {cat['label']}")
+                for sha, title in cat["items"]:
+                    md_lines.append(f"- [`{sha}`] {title}")
+                md_lines.append("")
+
+        return {
+            "repo_name": repo_name,
+            "base_ref": base_ref,
+            "head_ref": head_ref,
+            "total_commits": len(commits),
+            "files_changed": comparison.get("files_changed", 0),
+            "contributors": sorted(list(authors)),
+            "breaking_changes": breaking_changes,
+            "categories": {k: [item[1] for item in v["items"]] for k, v in categories.items() if v["items"]},
+            "markdown_notes": "\n".join(md_lines).strip(),
+        }
+
+    def get_api_quota_telemetry(self) -> dict:
+        """
+        Inspect live GitHub API rate-limit quota and return combined
+        telemetry performance and quota statistics.
+        """
+        try:
+            rate_limit = self.gh.get_rate_limit()
+            core = rate_limit.core
+            search = rate_limit.search
+            telemetry.update_quota_info(
+                core_remaining=core.remaining,
+                core_limit=core.limit,
+                reset_ts=int(core.reset.timestamp()) if core.reset else 0,
+                search_remaining=search.remaining,
+                search_limit=search.limit,
+            )
+        except Exception:
+            pass
+
+        return telemetry.get_summary()
+
 
