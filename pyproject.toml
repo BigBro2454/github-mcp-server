@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "github-mcp-server"
-version = "0.2.0"
+version = "0.3.0"
 description = "Model Context Protocol (MCP) server for GitHub scoped to BigBro2454"
 readme = "README.md"
 authors = [{ name = "Ishan Dhiman" }]
@@ -16,6 +16,9 @@ dependencies = [
     "PyGithub>=2.1.0",
     "python-dotenv>=1.0.0",
 ]
+
+[project.scripts]
+github-mcp = "server:cli_entrypoint"
 
 [project.optional-dependencies]
 dev = [
