@@ -1,0 +1,326 @@
+{
+  "timestamp": 1792692648.860158,
+  "fleet_size": 22,
+  "projections": {
+    "token_volume_per_run": {
+      "total_input": 6070,
+      "total_output": 11320,
+      "total_cacheable": 3035,
+      "total_tokens": 17390
+    },
+    "models": {
+      "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash (Vertex AI)",
+        "provider": "Google Cloud",
+        "single_run_cost_uncached": 0.003851,
+        "single_run_cost_cached": 0.003737,
+        "volume_costs_uncached": {
+          "10000": 38.51,
+          "100000": 385.12,
+          "500000": 1925.62,
+          "1000000": 3851.25
+        },
+        "volume_costs_cached": {
+          "10000": 37.37,
+          "100000": 373.74,
+          "500000": 1868.72,
+          "1000000": 3737.44
+        },
+        "p95_latency_ms": 115.0
+      },
+      "gemini-2.5-flash-lite": {
+        "name": "Gemini 2.5 Flash-Lite (Vertex AI)",
+        "provider": "Google Cloud",
+        "single_run_cost_uncached": 0.001926,
+        "single_run_cost_cached": 0.001869,
+        "volume_costs_uncached": {
+          "10000": 19.26,
+          "100000": 192.56,
+          "500000": 962.81,
+          "1000000": 1925.62
+        },
+        "volume_costs_cached": {
+          "10000": 18.69,
+          "100000": 186.87,
+          "500000": 934.36,
+          "1000000": 1868.72
+        },
+        "p95_latency_ms": 72.0
+      },
+      "claude-3-5-sonnet": {
+        "name": "Claude 3.5 Sonnet",
+        "provider": "Anthropic",
+        "single_run_cost_uncached": 0.18801,
+        "single_run_cost_cached": 0.179816,
+        "volume_costs_uncached": {
+          "10000": 1880.1,
+          "100000": 18801.0,
+          "500000": 94005.0,
+          "1000000": 188010.0
+        },
+        "volume_costs_cached": {
+          "10000": 1798.16,
+          "100000": 17981.55,
+          "500000": 89907.75,
+          "1000000": 179815.5
+        },
+        "p95_latency_ms": 560.0
+      },
+      "gpt-4o": {
+        "name": "GPT-4o",
+        "provider": "OpenAI",
+        "single_run_cost_uncached": 0.128375,
+        "single_run_cost_cached": 0.124581,
+        "volume_costs_uncached": {
+          "10000": 1283.75,
+          "100000": 12837.5,
+          "500000": 64187.5,
+          "1000000": 128375.0
+        },
+        "volume_costs_cached": {
+          "10000": 1245.81,
+          "100000": 12458.12,
+          "500000": 62290.62,
+          "1000000": 124581.25
+        },
+        "p95_latency_ms": 510.0
+      }
+    },
+    "savings_vs_gpt4o": {
+      "10000": {
+        "dollar_savings": 1246.38,
+        "percent_reduction": 97.1
+      },
+      "100000": {
+        "dollar_savings": 12463.76,
+        "percent_reduction": 97.1
+      },
+      "500000": {
+        "dollar_savings": 62318.78,
+        "percent_reduction": 97.1
+      },
+      "1000000": {
+        "dollar_savings": 124637.56,
+        "percent_reduction": 97.1
+      }
+    },
+    "savings_vs_claude": {
+      "10000": {
+        "dollar_savings": 1842.73,
+        "percent_reduction": 98.0
+      },
+      "100000": {
+        "dollar_savings": 18427.26,
+        "percent_reduction": 98.0
+      },
+      "500000": {
+        "dollar_savings": 92136.28,
+        "percent_reduction": 98.0
+      },
+      "1000000": {
+        "dollar_savings": 184272.56,
+        "percent_reduction": 98.0
+      }
+    }
+  },
+  "workloads": [
+    {
+      "id": "01",
+      "name": "list_my_repos",
+      "category": "Repository Discovery",
+      "input_tokens": 150,
+      "output_tokens": 450,
+      "cacheable_input_tokens": 75,
+      "p95_latency_ms": 85.0
+    },
+    {
+      "id": "02",
+      "name": "get_repo_info",
+      "category": "Repository Discovery",
+      "input_tokens": 120,
+      "output_tokens": 350,
+      "cacheable_input_tokens": 60,
+      "p95_latency_ms": 65.0
+    },
+    {
+      "id": "03",
+      "name": "list_branches",
+      "category": "Repository Discovery",
+      "input_tokens": 110,
+      "output_tokens": 220,
+      "cacheable_input_tokens": 55,
+      "p95_latency_ms": 55.0
+    },
+    {
+      "id": "04",
+      "name": "get_file_contents",
+      "category": "Code Inspection",
+      "input_tokens": 220,
+      "output_tokens": 850,
+      "cacheable_input_tokens": 110,
+      "p95_latency_ms": 95.0
+    },
+    {
+      "id": "05",
+      "name": "search_code",
+      "category": "Code Inspection",
+      "input_tokens": 280,
+      "output_tokens": 550,
+      "cacheable_input_tokens": 140,
+      "p95_latency_ms": 110.0
+    },
+    {
+      "id": "06",
+      "name": "list_recent_commits",
+      "category": "Code Inspection",
+      "input_tokens": 140,
+      "output_tokens": 380,
+      "cacheable_input_tokens": 70,
+      "p95_latency_ms": 70.0
+    },
+    {
+      "id": "07",
+      "name": "get_commit_details",
+      "category": "Code Inspection",
+      "input_tokens": 160,
+      "output_tokens": 420,
+      "cacheable_input_tokens": 80,
+      "p95_latency_ms": 75.0
+    },
+    {
+      "id": "08",
+      "name": "compare_branches",
+      "category": "Code Inspection",
+      "input_tokens": 240,
+      "output_tokens": 650,
+      "cacheable_input_tokens": 120,
+      "p95_latency_ms": 105.0
+    },
+    {
+      "id": "09",
+      "name": "list_pull_requests",
+      "category": "PR Collaboration",
+      "input_tokens": 140,
+      "output_tokens": 380,
+      "cacheable_input_tokens": 70,
+      "p95_latency_ms": 70.0
+    },
+    {
+      "id": "10",
+      "name": "get_pull_request",
+      "category": "PR Collaboration",
+      "input_tokens": 130,
+      "output_tokens": 360,
+      "cacheable_input_tokens": 65,
+      "p95_latency_ms": 60.0
+    },
+    {
+      "id": "11",
+      "name": "get_pr_diff",
+      "category": "PR Collaboration",
+      "input_tokens": 210,
+      "output_tokens": 950,
+      "cacheable_input_tokens": 105,
+      "p95_latency_ms": 115.0
+    },
+    {
+      "id": "12",
+      "name": "get_pr_files",
+      "category": "PR Collaboration",
+      "input_tokens": 150,
+      "output_tokens": 400,
+      "cacheable_input_tokens": 75,
+      "p95_latency_ms": 65.0
+    },
+    {
+      "id": "13",
+      "name": "list_pr_comments",
+      "category": "PR Collaboration",
+      "input_tokens": 140,
+      "output_tokens": 320,
+      "cacheable_input_tokens": 70,
+      "p95_latency_ms": 60.0
+    },
+    {
+      "id": "14",
+      "name": "review_pull_request",
+      "category": "PR Collaboration",
+      "input_tokens": 650,
+      "output_tokens": 880,
+      "cacheable_input_tokens": 325,
+      "p95_latency_ms": 140.0
+    },
+    {
+      "id": "15",
+      "name": "post_pr_comment",
+      "category": "PR Collaboration",
+      "input_tokens": 250,
+      "output_tokens": 120,
+      "cacheable_input_tokens": 125,
+      "p95_latency_ms": 80.0
+    },
+    {
+      "id": "16",
+      "name": "audit_repo_security_health",
+      "category": "Governance & Release",
+      "input_tokens": 480,
+      "output_tokens": 620,
+      "cacheable_input_tokens": 240,
+      "p95_latency_ms": 125.0
+    },
+    {
+      "id": "17",
+      "name": "generate_release_notes",
+      "category": "Governance & Release",
+      "input_tokens": 520,
+      "output_tokens": 750,
+      "cacheable_input_tokens": 260,
+      "p95_latency_ms": 130.0
+    },
+    {
+      "id": "18",
+      "name": "audit_dependency_vulnerabilities",
+      "category": "Governance & Release",
+      "input_tokens": 440,
+      "output_tokens": 580,
+      "cacheable_input_tokens": 220,
+      "p95_latency_ms": 110.0
+    },
+    {
+      "id": "19",
+      "name": "simulate_pr_merge_readiness",
+      "category": "Governance & Release",
+      "input_tokens": 460,
+      "output_tokens": 520,
+      "cacheable_input_tokens": 230,
+      "p95_latency_ms": 105.0
+    },
+    {
+      "id": "20",
+      "name": "calculate_developer_velocity_metrics",
+      "category": "Fleet Analytics",
+      "input_tokens": 380,
+      "output_tokens": 490,
+      "cacheable_input_tokens": 190,
+      "p95_latency_ms": 115.0
+    },
+    {
+      "id": "21",
+      "name": "export_portfolio_governance_report",
+      "category": "Fleet Analytics",
+      "input_tokens": 620,
+      "output_tokens": 920,
+      "cacheable_input_tokens": 310,
+      "p95_latency_ms": 145.0
+    },
+    {
+      "id": "22",
+      "name": "get_api_quota_telemetry",
+      "category": "Fleet Analytics",
+      "input_tokens": 80,
+      "output_tokens": 160,
+      "cacheable_input_tokens": 40,
+      "p95_latency_ms": 25.0
+    }
+  ]
+}

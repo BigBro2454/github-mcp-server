@@ -8,7 +8,7 @@ from github_client import GitHubClient
 
 
 def test_mcp_tool_registration():
-    """Verify all 18 MCP tools are registered with FastMCP."""
+    """Verify all 22 MCP tools are registered with FastMCP."""
     tool_names = [t.name for t in asyncio.run(server.mcp.list_tools())]
     expected_tools = [
         "list_my_repos",
@@ -29,10 +29,14 @@ def test_mcp_tool_registration():
         "audit_repo_security_health",
         "generate_release_notes",
         "get_api_quota_telemetry",
+        "simulate_pr_merge_readiness",
+        "audit_dependency_vulnerabilities",
+        "calculate_developer_velocity_metrics",
+        "export_portfolio_governance_report",
     ]
     for exp in expected_tools:
         assert exp in tool_names, f"Tool '{exp}' not found in registered tools"
-    assert len(tool_names) == 18
+    assert len(tool_names) == 22
 
 
 
